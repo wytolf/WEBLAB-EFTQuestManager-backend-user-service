@@ -21,21 +21,30 @@ function main() {
     const db = getFirestore();
 
     server.listen(process.env.PORT, () => {
-        console.log('Server is listening....');
+        console.log('User Server is listening....');
     });
 
     server.post('/api/user', async (req, res) => {
         console.log(`User Service: POST /user wurde aufgerufen.`);
-        const {id, username, role, quests} = req.body;
-        console.log('Request received {Username: ' + username + ', Role: ' + role + ' }');
-        await setDoc(doc(db, "users", id.toString()), {
-            id: id.toString(),
-            username: username,
-            role: role,
-            quests: quests
-        });
+        const {email, username, role, quests} = req.body;
 
-        res.status(200).send("user with id " + id +  " saved.");
+        console.log('Request received {Username: ' + username + ', Role: ' + role + ' }');
+        try {
+            const baseDocument = {
+                id: email,
+                username,
+                role
+            }
+            await setDoc(doc(db, "users", email), {
+                ...baseDocument, ...(quests ? {quests} : {})
+            });
+        } catch (error) {
+            console.error('User Service: POST /user -> Error post user:', error);
+            res.status(500).send('User Service: POST /user -> Internal Server Error');
+        }
+
+
+        res.status(200).send("user with id " + email +  " saved.");
     });
 
     server.get('/api/user', async (req, res) => {
