@@ -31,9 +31,7 @@ function main() {
         console.log('Request received {Username: ' + username + ', Role: ' + role + ' }');
         try {
             const baseDocument = {
-                id: email,
-                username,
-                role
+                id: email, username, role
             }
             await setDoc(doc(db, "users", email), {
                 ...baseDocument, ...(quests ? {quests} : {})
@@ -44,7 +42,7 @@ function main() {
         }
 
 
-        res.status(200).send("user with id " + email +  " saved.");
+        res.status(200).send("user with id " + email + " saved.");
     });
 
     server.get('/api/user', async (req, res) => {
@@ -78,8 +76,7 @@ function main() {
                 res.status(404).send("User Service: GET /user/" + id + ' -> User nicht gefunden');
             }
 
-        } catch
-            (error) {
+        } catch (error) {
             console.error('Error fetching user:', error);
             res.status(500).send('User Service: GET /user/' + id + ' -> Error fetching user:' + error);
         }
