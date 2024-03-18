@@ -17,32 +17,30 @@ function main() {
     const server = express();
     server.use(express.json())
 
-    const app = initializeApp.initializeApp(firebaseConfig);
     const db = getFirestore();
 
     server.listen(process.env.PORT, () => {
         console.log('User Server is listening....');
     });
 
-    server.post('/api/user', async (req, res) => {
-        console.log(`User Service: POST /user wurde aufgerufen.`);
-        const {email, username, role, quests} = req.body;
+    server.put('/api/user', async (req, res) => {
+        console.log(`User Service: PUT /user wurde aufgerufen.`);
+        const {email, role, quests} = req.body;
 
-        console.log('Request received {Username: ' + username + ', Role: ' + role + ' }');
+        console.log('User Service: PUT /user -> Request received {Email: ' + email + ', Role: ' + role + ' }');
         try {
             const baseDocument = {
-                id: email, username, role
+                id: email, role
             }
             await setDoc(doc(db, "users", email), {
                 ...baseDocument, ...(quests ? {quests} : {})
             });
         } catch (error) {
-            console.error('User Service: POST /user -> Error post user:', error);
-            res.status(500).send('User Service: POST /user -> Internal Server Error');
+            console.error('User Service: PUT /user -> Error post user:', error);
+            res.status(500).send({message:'User Service: PUT /user -> Internal Server Error'});
         }
 
-
-        res.status(200).send("user with id " + email + " saved.");
+        res.status(200).send({message: "user with id " + email + " saved."});
     });
 
     server.get('/api/user', async (req, res) => {
