@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const winston = require('winston');
 
 const {getFirestore, collection, getDocs, doc, getDoc, setDoc} = require('firebase/firestore');
 const initializeApp = require('firebase/app');
@@ -20,15 +21,29 @@ function main() {
     const app = initializeApp.initializeApp(firebaseConfig);
     const db = getFirestore();
 
+    const logger = winston.createLogger({
+        level: 'info',
+        format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.timestamp(),
+            winston.format.align(),
+            winston.format.printf(info => `${info.timestamp} ${info.service} ${info.level}: ${info.message}`)
+        ),
+        defaultMeta: { service: 'user-service' },
+        transports: [
+            new winston.transports.Console(),
+        ],
+    });
+
     server.listen(process.env.PORT, () => {
-        console.log('User Server is listening....');
+        logger.info('Server is listening');
     });
 
     server.put('/api/user', async (req, res) => {
-        console.log(`User Service: PUT /user wurde aufgerufen.`);
+        logger.info(`PUT /user wurde aufgerufen.`);
         const {email, role, quests} = req.body;
 
-        console.log('User Service: PUT /user -> Request received {Email: ' + email + ', Role: ' + role + ' }');
+        logger.info('PUT /user -> Request received {Email: ' + email + ', Role: ' + role + ' }');
         try {
             const baseDocument = {
                 id: email, role
@@ -37,28 +52,28 @@ function main() {
                 ...baseDocument, ...(quests ? {quests} : {})
             });
         } catch (error) {
-            console.error('User Service: PUT /user -> Error post user:', error);
-            res.status(500).send({message:'User Service: PUT /user -> Internal Server Error'});
+            logger.error('PUT /user -> Error post user:', error);
+            res.status(500).send({message:'PUT /user -> Internal Server Error'});
         }
 
         res.status(200).send({message: "user with id " + email + " saved."});
     });
 
     server.get('/api/user', async (req, res) => {
-        console.log(`User Service: GET /user wurde aufgerufen.`);
+        logger.info(`GET /user wurde aufgerufen.`);
         try {
             const userList = await getUsers(db);
             res.status(200).json(userList);
-            console.log(`User Service: GET /user -> Daten erfolgreich gesendet`);
+            logger.info(`GET /user -> Daten erfolgreich gesendet`);
         } catch (error) {
-            console.error('User Service: GET /user -> Error fetching users:', error);
-            res.status(500).send('User Service: GET /user -> Internal Server Error');
+            logger.error('GET /user -> Error fetching users:', error);
+            res.status(500).send('GET /user -> Internal Server Error');
         }
     });
 
     server.get('/api/user/:id', async (req, res) => {
         const id = req.params.id;
-        console.log(`User Service: GET /user/` + id + ` wurde aufgerufen.`);
+        logger.info(`GET /user/` + id + ` wurde aufgerufen.`);
 
         try {
             const userDocument = doc(db, "users", id);
@@ -67,27 +82,27 @@ function main() {
 
             if (userSnapshot.exists()) {
                 let user = userSnapshot.data();
-                console.log(`User Service: GET /user/` + id + ` -> User gefunden` + user);
+                logger.info(`GET /user/` + id + ` -> User gefunden` + user);
                 res.status(200).json(user);
-                console.log(`User Service: GET /user/` + id + ` -> Daten erfolgreich gesendet`);
+                logger.info(`GET /user/` + id + ` -> Daten erfolgreich gesendet`);
             } else {
-                console.log("User Service: GET /user/" + id + " -> Document existiert nicht in db");
-                res.status(404).send("User Service: GET /user/" + id + ' -> User nicht gefunden');
+                logger.info("GET /user/" + id + " -> Document existiert nicht in db");
+                res.status(404).send("GET /user/" + id + ' -> User nicht gefunden');
             }
 
         } catch (error) {
-            console.error('Error fetching user:', error);
-            res.status(500).send('User Service: GET /user/' + id + ' -> Error fetching user:' + error);
+            logger.error('Error fetching user:', error);
+            res.status(500).send('GET /user/' + id + ' -> Error fetching user:' + error);
         }
     });
+
+    async function getUsers(db) {
+        const users = collection(db, 'users');
+        const userSnapshot = await getDocs(users);
+        return  userSnapshot.docs.map(doc => doc.data());
+    }
 }
 
-async function getUsers(db) {
-    const users = collection(db, 'users');
-    const userSnapshot = await getDocs(users);
-    const userList = userSnapshot.docs.map(doc => doc.data());
-    console.log(`User Service: GET /api/user -> UserList: ${userList}`);
-    return userList;
-}
+
 
 main();
